@@ -102,31 +102,49 @@ elseif CLIENT then
             end
             
             if (#color >= 3) == false then
-                if untilIdx[1] == nil and endIdx[1] == nil then
-                    table.insert(untilIdx,i)
-                    table.insert(endIdx,untilIdx[1] + tonumber(color[1]))
+                if untilIdxC[1] == nil and endIdxC[1] == nil then
+                    table.insert(untilIdxC,i)
+                    table.insert(endIdxC,untilIdxC[1] + tonumber(color[1]))
                 end
             end
             
-            if untilIdx[1] ~= nil and endIdx[1] ~= nil then
-                for j = untilIdx[1], endIdx[1] do
+            if untilIdxC[1] ~= nil and endIdxC[1] ~= nil then
+                for j = untilIdxC[1], endIdxC[1] do
                     if i == j then Holo.Holograms[Name]:setColor(lastColor) end
                 end
             end
 
-            if untilIdx ~= nil and endIdx[1] ~= nil and i == endIdx[1] - 1 then
+            if untilIdxC ~= nil and endIdxC[1] ~= nil and i == endIdxC[1] - 1 then
                 c = c + 1
-                table.remove(untilIdx)
-                table.remove(endIdx)
+                table.remove(untilIdxC)
+                table.remove(endIdxC)
+            end
+
+            if string.explode(" ",mtl)[1] ~= "custom" then 
+                if tonumber(mtl) == nil and stay == 0 then 
+                    m = m + 1
+                    lastMaterial = mtl
+                    Holo.Holograms[Name]:setMaterial(mtl) 
+                elseif tonumber(mtl) ~= nil then
+                    if untilIdxM[1] == nil and endIdxM[1] == nil then
+                        stay = 1
+                        table.insert(untilIdxM,i)
+                        table.insert(endIdxM,untilIdxM[1] + tonumber(mtl))
+                    end
+                end
             end
             
-            if string.explode(" ",Settings.Material[i])[1] ~= "custom" then 
-                if Settings.Material[i] ~= -1 then 
-                    lastMaterial = Settings.Material[i]
-                    Holo.Holograms[Name]:setMaterial(Settings.Material[i]) 
-                elseif Settings.Material[i] == -1 then
-                    Holo.Holograms[Name]:setMaterial(lastMaterial)
+            if untilIdxM[1] ~= nil and endIdxM[1] ~= nil then
+                for j = untilIdxM[1], endIdxM[1] do
+                    if i == j then Holo.Holograms[Name]:setMaterial(lastMaterial) end
                 end
+            end
+            
+            if untilIdxM ~= nil and endIdxM[1] ~= nil and i == endIdxM[1] - 1 and stay == 1 then
+                m = m + 1
+                stay = 0
+                table.remove(untilIdxM,1)
+                table.remove(endIdxM,1)
             end
             
             http.get( URL,function(objdata)
@@ -134,15 +152,40 @@ elseif CLIENT then
     
                 local function doneLoadingMesh()
                     print("Used "..(triangles - mesh.trianglesLeft()).." triangles to load "..Name)
-                    if string.explode(" ",Settings.Material[i])[1] == "custom" then
-                        local CMS = string.explode(" ",Settings.Material[i])[2]
-                        local CMS = string.replace(CMS,"www","dl")
-                        local CMS = string.replace(CMS,"?dl=0","")
-                        
-                        local customMaterial = material.create("VertexLitGeneric")
-                        customMaterial:setTextureURL("$basetexture",CMS)
-                        Holo.Holograms[Name]:setMeshMaterial(customMaterial) 
+                    if string.explode(" ",mtl)[1] == "custom" then
+                        if tonumber(mtl) == nil and stay == 0 then 
+                            m = m + 1
+                            local CMS = string.explode(" ",Settings.Material[i])[2]
+                            local CMS = string.replace(CMS,"www","dl")
+                            local CMS = string.replace(CMS,"?dl=0","")
+                            
+                            local customMaterial = material.create("VertexLitGeneric")
+                            customMaterial:setTextureURL("$basetexture",CMS)
+                            lastMaterial = customMaterial
+                            
+                            Holo.Holograms[Name]:setMeshMaterial(customMaterial) 
+                        elseif tonumber(mtl) ~= nil then
+                            if untilIdxM[2] == nil and endIdxM[2] == nil then
+                                stay = 1
+                                table.insert(untilIdxM[2],i)
+                                table.insert(endIdxM[2],untilIdxM[2] + tonumber(mtl))
+                            end
+                        end
                     end
+                    
+                    if untilIdxM[2] ~= nil and endIdxM[2] ~= nil then
+                        for j = untilIdxM[2], endIdxM[2] do
+                            if i == j then Holo.Holograms[Name]:setMeshMaterial(lastMaterial)  end
+                        end
+                    end
+                        
+                    if untilIdxM ~= nil and endIdxM[2] ~= nil and i == endIdxM[2] - 1 and stay == 1 then
+                        m = m + 1
+                        stay = 0
+                        table.remove(untilIdxM,2)
+                        table.remove(endIdxM,2)
+                    end
+            
                     Holo.Holograms[Name]:setMesh(mymesh)
                     Holo.Holograms[Name]:setScale(Vector(Scale))
                     Holo.Holograms[Name]:setRenderBounds(Vector(-200),Vector(200))
@@ -154,7 +197,7 @@ elseif CLIENT then
     
                 local loadmesh = coroutine.wrap(function() mymesh = mesh.createFromObj(objdata, true, true).Draw return true end)
                 hook.add("think","loadingMesh",function()
-                    while quotaAverage()<quotaMax()/(math.clamp(Settings.Speed,4,50)) do
+                    while quotaAverage()<quotaMax()/(math.clamp(Settings.Speed,4,500)) do
                         if loadmesh() then
                             doneLoadingMesh()
                             hook.remove("think","loadingMesh")

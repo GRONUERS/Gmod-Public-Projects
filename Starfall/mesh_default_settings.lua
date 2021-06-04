@@ -8,7 +8,7 @@ if CLIENT then
     local meshSpeed = 7
     
     local settings = { ["HudStatus"] = true,
-                       ["Scale"] = 0.5,
+                       ["Scale"] = 1,
                        ["Delay"] = meshdelay,
                        ["Speed"] = meshSpeed,
                        ["Name"] = name,
