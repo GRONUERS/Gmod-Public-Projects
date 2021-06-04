@@ -1,0 +1,371 @@
+@name Car_EGP Pack v0.1
+@inputs Aktiv Mouse1 Mouse2 ParkGear ParkingBrake DrivingLight Lowbeam Highbeam Foglight TurnSignalLeft TurnSignalRight [EGP Chassis Engine Gearbox Fuel Chair]:wirelink Throttle Brake
+@outputs Ops [GearAry GearNumber]:array
+@persist Resolution:vector2 [Setting ScaleFunction]:table [GearString GearNumber]:array RPMPercent RPMPercent_S
+@persist FuelLine ThrottleBar BrakeBar GearString1 GearString2 GearMax StopGearScaleUp1 StopGearScaleUp2 StopGearScaleDw1 StopGearScaleDw2
+@persist Speed Gear RPM FuelCapacity FuelRemaining GearboxCondition:string GearUp GearDw FuelPercent FuelPercent_S [GearAry GearScl]:array
+@persist GearScaleUp1 GearScaleUp1_S GearColourUp1 GearColourUp1_S GSB_Up1 GearScaleUp2 GearColourUp2 GearScaleUp2_S GearColourUp2_S GSB_Up2
+@persist GearScaleDw1 GearScaleDw1_S GearColourDw1 GearColourDw1_S GSB_Dw1 GearScaleDw2 GearColourDw2 GearScaleDw2_S GearColourDw2_S GSB_Dw2
+@persist FuelRedColour Th Bk RPMLine1 RPMLine2 RPMLine3 RPMRedline Alpha1 Alpha2 Speedo RPMString
+
+interval(50)
+Ops = ops()
+if(first()|duped()|dupefinished()){ 
+    #This chip is made for just general car not for race car
+    #SBC = Slide Bar Condition
+    EGP:egpClear()
+    IDX=0
+    GearMax = 8 #If the Gearbox is not acf, edit this
+    
+    Setting = table(
+        "Slide Bar Condition" = 0, #[Enable or Disable the Throttle and Brake Slidebar 1 = on, 0 = off 
+        This means, is the Throttle's or Brake's max-value is 100 or 1]#
+        
+        "Throttle Max-Value" = 100, #For the Slide Bar Setting, if SBC is 0, you don't need to setting this value just ignore that
+        "Brake Max-Value" = 5, #This one too, if SBC is 0, just ignore this
+        
+        "Hud Background Color" = vec4(0,0,0,150), #Set Background Color of Hud (R,G,B,A)
+        "Hud Standard Color" = vec4(255), #Set Standard Color of Hud (RPM Indicator, Speedo, Fuel Remaning, etc.)
+        "Hud String Color" = vec4(255),
+        "Hud Throttle-B Color" = vec4(75,75,255,255),
+        "Hud Brake-B Color" = vec4(255,100,100,255),
+        
+        "Speedo Method" = "km/h", #Set the Speedo Method km/h or mi/h
+        "Max Gear" = Gearbox:entity():acfIsGearbox() ? Gearbox:entity():acfNumGears() : GearMax #Maximum is 10 (RND)
+    )
+    
+    #Don't Edit under the this line
+    Resolution = vec2(1920,1080)
+    ScaleFunction = table(
+        "BackGround" = vec2(400*Resolution:x()/Resolution:x(),200*Resolution:y()/Resolution:y()),
+        "GuideLine1" = vec2(3*Resolution:x()/Resolution:x(),25*Resolution:y()/Resolution:y()),
+        "GuideLine2" = vec2(3*Resolution:x()/Resolution:x(),17.5*Resolution:y()/Resolution:y()),
+        "GuideLine3" = vec2(2*Resolution:x()/Resolution:x(),10*Resolution:y()/Resolution:y()),
+        "GuideLine4" = vec2(350*Resolution:x()/Resolution:x(),3*Resolution:y()/Resolution:y()),
+        "Gear Standard" = 60*Resolution:x()/Resolution:x(),
+        "Speedo Standard" = 35*Resolution:x()/Resolution:x()
+    )
+    
+    FuelCapacity = Fuel:entity():acfIsFuel() ? Fuel:entity():acfCapacity() : Fuel["Capacity",number]
+    RPMRedline = Engine:entity():acfIsEngine() ? Engine:entity():acfRedline() : Engine["Redline",number]
+    
+    GearString = array("P","R","N")
+    
+    for(I=1,Setting["Max Gear",number]){
+        GearNumber:pushString(""+I+"")
+    }
+    GearMax=clamp(GearMax,0,10)
+}
+
+#[if(changed(Chair:entity():driver())&Chair:entity():driver()){
+    Resolution = egpScrSize(Chair:entity())
+    ScaleFunction = table(
+        "BackGround" = vec2(400*Resolution:x()/Resolution:x(),200*Resolution:y()/Resolution:y()),
+        "Fuel GuideLine1" = vec2(3*Resolution:x()/Resolution:x(),25*Resolution:y()/Resolution:y()),
+        "Fuel GuideLine2" = vec2(3*Resolution:x()/Resolution:x(),17.5*Resolution:y()/Resolution:y()),
+        "Fuel GuideLine3" = vec2(2*Resolution:x()/Resolution:x(),10*Resolution:y()/Resolution:y()),
+        "Fuel GuideLine4" = vec2(350*Resolution:x()/Resolution:x(),3*Resolution:y()/Resolution:y()),
+        "Slider GuideLine1" = vec2(3*Resolution:x()/Resolution:x(),25*Resolution:y()/Resolution:y()),
+        "Slider GuideLine2" = vec2(3*Resolution:x()/Resolution:x(),17.5*Resolution:y()/Resolution:y()),
+        "Slider GuideLine3" = vec2(2*Resolution:x()/Resolution:x(),10*Resolution:y()/Resolution:y()),
+        "Slider GuideLine4" = vec2(350*Resolution:x()/Resolution:x(),3*Resolution:y()/Resolution:y()),
+        "Gear Standard" = 60*Resolution:x()/Resolution:x()
+    )
+    
+}]#
+
+if(~Aktiv&&Aktiv){
+    IDX++
+    EGP:egpRoundedBox(IDX,vec2(Resolution:x()-250,Resolution:y()-150),ScaleFunction["BackGround",vector2])
+    EGP:egpColor(IDX,Setting["Hud Background Color",vector4])
+    
+    #Fuel Start
+    for(I=0,8){
+        IDX++
+        EGP:egpBox(IDX,vec2(Resolution:x()-425+I*43.75,Resolution:y()-70),ScaleFunction["GuideLine3",vector2])
+        EGP:egpColor(IDX,Setting["Hud Standard Color",vector4])
+    }
+    
+    IDX++
+    EGP:egpBox(IDX,vec2(Resolution:x()-250,Resolution:y()-70),ScaleFunction["Fuel Line",vector2])
+    FuelLine = IDX
+    
+    for(I=0,2){
+        IDX++
+        EGP:egpBox(IDX,vec2(Resolution:x()-425+I*175,I!=1 ? Resolution:y()-75 : Resolution:y()-72.5),
+        I!=1 ? ScaleFunction["GuideLine1",vector2] : ScaleFunction["GuideLine2",vector2])
+        EGP:egpColor(IDX,Setting["Hud Standard Color",vector4])
+    }
+    
+    IDX++
+    EGP:egpBox(IDX,vec2(Resolution:x()-250,Resolution:y()-64),ScaleFunction["GuideLine4",vector2])
+    EGP:egpColor(IDX,Setting["Hud Standard Color",vector4])
+    #Fuel End
+    
+    #Throttle and Brake Bar Start
+    for(I=0,6){
+        IDX++
+        EGP:egpBox(IDX,vec2(Resolution:x()-425+I*58.33333333333333,Resolution:y()-130),ScaleFunction["GuideLine3",vector2])
+        EGP:egpColor(IDX,Setting["Hud Standard Color",vector4])
+    }
+    
+    IDX++
+    EGP:egpBox(IDX,vec2(Resolution:x()-162,Resolution:y()-130),ScaleFunction["Slider Throttle",vector2])
+    EGP:egpColor(IDX,Setting["Hud Throttle-B Color",vector4])
+    ThrottleBar = IDX
+    
+    IDX++
+    EGP:egpBox(IDX,vec2(Resolution:x()-338,Resolution:y()-130),ScaleFunction["Slider Brake",vector2])
+    EGP:egpColor(IDX,Setting["Hud Brake-B Color",vector4])
+    BrakeBar = IDX
+    
+    for(I=0,2){
+        IDX++
+        EGP:egpBox(IDX,vec2(Resolution:x()-425+I*175,I!=1 ? Resolution:y()-125 : Resolution:y()-127.5),
+        I!=1 ? ScaleFunction["GuideLine1",vector2] : ScaleFunction["GuideLine2",vector2])
+        EGP:egpColor(IDX,Setting["Hud Standard Color",vector4])
+    }
+
+    IDX++
+    EGP:egpBox(IDX,vec2(Resolution:x()-250,Resolution:y()-136),ScaleFunction["GuideLine4",vector2])
+    EGP:egpColor(IDX,Setting["Hud Standard Color",vector4])
+    #Throttle and Brake Bar End
+    
+    #Gear Functions Start
+    IDX++
+    EGP:egpText(IDX,ParkGear ? "P" : "N",vec2(Resolution:x()-250,Resolution:y()-175))
+    EGP:egpFont(IDX,"chatfont",ScaleFunction["Gear Standard",number])
+    EGP:egpAlign(IDX,1,1)
+    EGP:egpColor(IDX,Setting["Hud String Color",vector4])
+    GearString1 = IDX
+    
+    IDX++
+    EGP:egpText(IDX,ParkGear ? "P" : "N",vec2(Resolution:x()-250,Resolution:y()-175))
+    EGP:egpFont(IDX,"chatfont",ScaleFunction["Gear Standard",number])
+    EGP:egpAlign(IDX,1,1)
+    EGP:egpColor(IDX,Setting["Hud String Color",vector4])
+    GearString2 = IDX
+    #Gear Functions End
+    
+    #RPM Functions Start
+    IDX++
+    EGP:egpBox(IDX,vec2(Resolution:x()-250,Resolution:y()-220),ScaleFunction["RPM Line",vector2])
+    EGP:egpColor(IDX,vec(255,255,255))
+    RPMLine1 = IDX
+    
+    IDX++
+    EGP:egpBox(IDX,vec2(Resolution:x()-250,Resolution:y()-220),ScaleFunction["RPM Line",vector2])
+    EGP:egpColor(IDX,vec(255,50,50))
+    RPMLine2 = IDX
+    
+    IDX++
+    EGP:egpBox(IDX,vec2(Resolution:x()-250,Resolution:y()-220),ScaleFunction["RPM Line",vector2])
+    EGP:egpColor(IDX,vec(0,255,255))
+    RPMLine3 = IDX
+    
+    for(I=0,10){
+        IDX++
+        EGP:egpBox(IDX,vec2(Resolution:x()-425+I*35,Resolution:y()-220),ScaleFunction["GuideLine3",vector2])
+        EGP:egpColor(IDX,Setting["Hud Standard Color",vector4])
+    }
+    
+    for(I=0,2){
+        IDX++
+        EGP:egpBox(IDX,vec2(Resolution:x()-425+I*175,I!=1 ? Resolution:y()-215 : Resolution:y()-217.5),
+        I!=1 ? ScaleFunction["GuideLine1",vector2] : ScaleFunction["GuideLine2",vector2])
+        EGP:egpColor(IDX,Setting["Hud Standard Color",vector4])
+    }
+    
+    IDX++
+    EGP:egpBox(IDX,vec2(Resolution:x()-250,Resolution:y()-226),ScaleFunction["GuideLine4",vector2])
+    EGP:egpColor(IDX,Setting["Hud Standard Color",vector4])
+    
+    #Speed and RPM String Function Start
+    IDX++
+    EGP:egpText(IDX,Setting["Speedo Method",string],vec2(Resolution:x()-285,Resolution:y()-166))
+    EGP:egpAlign(IDX,2,1)
+    EGP:egpFont(IDX,"chatfont",ScaleFunction["Speedo Standard",number])
+    Speedo = IDX
+    
+    IDX++
+    EGP:egpText(IDX,RPM+" RPM",vec2(Resolution:x()-75,Resolution:y()-166))
+    EGP:egpAlign(IDX,2,1)
+    EGP:egpFont(IDX,"chatfont",ScaleFunction["Speedo Standard",number])
+    RPMString = IDX
+    #Speed and RPM String Function End
+    
+}
+
+
+Speed = toUnit(Setting["Speedo Method",string],Chassis:entity():vel():length())*(1-tickInterval())
+Gear = Gearbox:entity():acfIsGearbox() ? Gearbox:entity():acfGear() : Gearbox["Gear",number]
+if(changed(Gearbox)&->Gearbox){GearboxCondition = Gearbox:entity():acfIsGearbox() ? "ACF" : "E2"}
+RPM = Engine:entity():acfIsEngine() ? Engine:entity():acfRPM()*(1-tickInterval()) : Engine["RPM",number]*(1-tickInterval())
+if(changed(Engine)&->Engine){EngineCondition = Engine:entity():acfIsEngine() ? "ACF" : "E2"}
+FuelRemaining = Fuel:entity():acfIsFuel() ? Fuel:entity():acfFuel()*(1-tickInterval()) : Fuel["Fuel",number]*(1-tickInterval())
+if(changed(Fuel)&->Fuel){FuelCondition = Fuel:entity():acfIsFuel() ? "ACF" : "E2"}
+FuelPercent = (FuelRemaining/FuelCapacity)*100
+FuelPercent_S += (FuelPercent-FuelPercent_S)*0.1
+
+FuelRedColour = FuelPercent<30 ? clamp(FuelPercent*8.5,0,255) : 255
+FuelRedColour += (FuelRedColour-FuelRedColour)*0.1
+
+RPMPercent = (RPM/RPMRedline)*100
+RPMPercent_S += (RPMPercent-RPMPercent_S)*0.4
+
+EGP:egpPos(FuelLine,vec2(Resolution:x()-(425-FuelPercent_S*1.75),Resolution:y()-70))
+EGP:egpSize(FuelLine,vec2((FuelPercent_S*3.55*(1-tickInterval()))*Resolution:x()/Resolution:x(),15*Resolution:y()/Resolution:y()))
+EGP:egpColor(FuelLine,vec(255,FuelRedColour,FuelRedColour))
+
+EGP:egpPos(RPMLine1,vec2(Resolution:x()-(425-RPMPercent_S*1.75),Resolution:y()-220))
+EGP:egpSize(RPMLine1,vec2((RPMPercent_S*3.55*(1-tickInterval()))*Resolution:y()/Resolution:y(),15*Resolution:y()/Resolution:y()))
+
+EGP:egpPos(RPMLine2,vec2(Resolution:x()-(425-RPMPercent_S*1.75),Resolution:y()-220))
+EGP:egpSize(RPMLine2,vec2((RPMPercent_S*3.55*(1-tickInterval()))*Resolution:y()/Resolution:y(),15*Resolution:y()/Resolution:y()))
+
+EGP:egpPos(RPMLine3,vec2(Resolution:x()-(425-RPMPercent_S*1.75),Resolution:y()-220))
+EGP:egpSize(RPMLine3,vec2((RPMPercent_S*3.55*(1-tickInterval()))*Resolution:y()/Resolution:y(),15*Resolution:y()/Resolution:y()))
+
+EGP:egpSetText(Speedo,round(Speed)+" "+Setting["Speedo Method",string])
+EGP:egpSetText(RPMString,round(RPM)+" RPM")
+
+function wirelink:alpha2EGP(RPMRed) {
+    local Alpha1 = RPM > (RPMRed/2.5) ? clamp((RPM/(RPMRed/2.5)-1.2)*650,0,255) : 0
+    local Alpha2 = RPM > (RPMRed/1.6) ? clamp((RPM/(RPMRed/1.6)-1.12)*800,0,255) : 0
+    
+    EGP:egpColor(RPMLine2,vec4(255,50,50,Alpha1*(1-tickInterval())))
+    EGP:egpColor(RPMLine3,vec4(0,255,255,Alpha2*(1-tickInterval())))
+}
+
+EGP:alpha2EGP(RPMRedline)
+
+if(!Setting["Slide Bar Condition",number]){
+    Th = Throttle ? clamp(Th+15,0,100) : clamp(Th-20,0,100)
+    Bk = Brake ? clamp(Bk+15,0,100) : clamp(Bk-20,0,100)
+    
+    EGP:egpSize(ThrottleBar,vec2((Th*(1-tickInterval()))*1.75*Resolution:x()/Resolution:x(),15*Resolution:y()/Resolution:y()))
+    EGP:egpSize(BrakeBar,vec2((Bk*(1-tickInterval()))*1.75*Resolution:x()/Resolution:x(),15*Resolution:y()/Resolution:y()))
+    
+    EGP:egpPos(ThrottleBar,vec2(Resolution:x()-(250-(Th*(1-tickInterval()))*0.9),Resolution:y()-130))
+    EGP:egpPos(BrakeBar,vec2(Resolution:x()-(248+(Bk*(1-tickInterval()))*0.9),Resolution:y()-130))    
+}
+
+function array gear2String(Gear,IsGearboxACF:string){
+    StringStandard = ParkGear ? "P" : Gear<1 & Gear != 0 ? GearString[3-Gear,string] : Gear>1 ? GearNumber[Gear,string] : Gear==7 ? "8" : Gear==2 ? "1" : Gear==1 ? "N" : Gear==0 ? "1" : "nil"
+    String1 = ParkGear ? "P" : Gear>2 ? (StringStandard:toNumber()-2):toString() : Gear == 2 ? "N" : Gear == 0 ? "R" : Gear == 1 ? "R" : "nil"
+    String2 = ParkGear ? "P" : Gear>2 ? (StringStandard:toNumber()-1):toString() : Gear == 2 ? "1" : Gear == 1 ? "R" : Gear == 0 ? "N" : "nil"
+    
+    return array(StringStandard,String1,String2)
+}
+
+function array gearScaler(C1,C2,IsGearboxACF:string){
+    #GearUp Start
+    if(Gear==GearMax&!StopGearScaleUp1){timer("Stop GearScaleUp1",175)}
+    if(clk("Stop GearScaleUp1")) { StopGearScaleUp1 = 1 }
+    elseif(Gear!=GearMax){ StopGearScaleUp1 = 0 }
+    if(changed(StopGearScaleUp1)&!StopGearScaleUp1&Gear!=GearMax){ GearScaleUp1 = GearColourUp1 = 0 }
+    
+    if(changed(C1)&C1&!StopGearScaleUp1){timer("GSB Up1",10)}
+    if(clk("GSB Up1")){GSB_Up1 = !GSB_Up1, GearScaleUp1 = 50*Resolution:x()/Resolution:x() GearColourUp1 = 260}
+    if(GSB_Up1&GearScaleUp1>=(120*Resolution:x()/Resolution:x())){GSB_Up1=0}
+    if(GSB_Up1&GearScaleUp1<(120*Resolution:x()/Resolution:x())){GearScaleUp1=clamp(GearScaleUp1+15,50*Resolution:x()/Resolution:x(),120*Resolution:x()/Resolution:x())}
+    if(GSB_Up1&GearScaleUp1<(120*Resolution:x()/Resolution:x())){GearColourUp1=clamp(GearColourUp1-72.5,0,260)}
+
+    if(!StopGearScaleUp1){
+        GearScaleUp1_S += (GearScaleUp1-GearScaleUp1_S)*0.85
+        GearColourUp1_S += (GearColourUp1-GearColourUp1_S)*0.85
+    }
+    if(changed(StopGearScaleUp1)&StopGearScaleUp1) { GearScaleUp1 = 120*Resolution:x()/Resolution:x() GearColourUp1 = 0 }
+    
+    #---------------------------------------------------------------------------------------------
+    
+    if(Gear==GearMax&!StopGearScaleUp2){timer("Stop GearScaleUp2",175)}
+    if(clk("Stop GearScaleUp2")) { StopGearScaleUp2 = 1 }
+    elseif(Gear!=GearMax){ StopGearScaleUp2 = 0 }
+    if(changed(StopGearScaleUp2)&!StopGearScaleUp2&Gear!=GearMax){ GearScaleUp2 = GearColourUp2 = 0 }
+    
+    if(changed(C1)&C1&!StopGearScaleUp2){timer("GSB Up2",10)}
+    if(clk("GSB Up2")){GSB_Up2 = !GSB_Up2, GearScaleUp2 = -15*Resolution:x()/Resolution:x() GearColourUp2 = -72.5}
+    if(GSB_Up2&GearScaleUp2>=(60*Resolution:x()/Resolution:x())){GSB_Up2=0}
+    if(GSB_Up2&GearScaleUp2<(60*Resolution:x()/Resolution:x())){GearScaleUp2=clamp(GearScaleUp2+15,-15*Resolution:x()/Resolution:x(),60*Resolution:x()/Resolution:x())}
+    if(GSB_Up2&GearScaleUp2<(60*Resolution:x()/Resolution:x())){GearColourUp2=clamp(GearColourUp2+72.5,-72.5,255)}
+    
+    if(!StopGearScaleUp2){
+        GearScaleUp2_S += (GearScaleUp2-GearScaleUp2_S)*0.85
+        GearColourUp2_S += (GearColourUp2-GearColourUp2_S)*0.85
+    }
+    if(changed(StopGearScaleUp2)&StopGearScaleUp2) { GearScaleUp2 = 60*Resolution:x()/Resolution:x() GearColourUp2 = 255 }
+    #GearUp End
+    
+    #----------------------------------------------------------------------------------------------
+    
+    #GearDown Start
+    if(Gear==1&!StopGearScaleDw1){timer("Stop GearScaleDw1",275)}
+    if(clk("Stop GearScaleDw1")) { StopGearScaleDw1 = 1 }
+    elseif(Gear!=1){ StopGearScaleDw1 = 0 }
+    if(changed(StopGearScaleDw1)&!StopGearScaleDw1&Gear!=1){ GearScaleDw1 = GearColourDw1 = 0 }
+    
+    if(changed(C2)&C2&!StopGearScaleDw1){timer("GSB Dw1",10)}
+    if(clk("GSB Dw1")){GSB_Dw1 = !GSB_Dw1, GearScaleDw1 = 135*Resolution:x()/Resolution:x() GearColourDw1 = -85}
+    if(GSB_Dw1&GearScaleDw1<=(60*Resolution:x()/Resolution:x())){GSB_Dw1=0}
+    if(GSB_Dw1&GearScaleDw1>(60*Resolution:x()/Resolution:x())){GearScaleDw1=clamp(GearScaleDw1-12.5,60*Resolution:x()/Resolution:x(),135*Resolution:x()/Resolution:x())}
+    if(GSB_Dw1&GearScaleDw1>(60*Resolution:x()/Resolution:x())){GearColourDw1=clamp(GearColourDw1+52.5,-85,255)}
+
+    if(!StopGearScaleDw1){
+        GearScaleDw1_S += (GearScaleDw1-GearScaleDw1_S)*0.85
+        GearColourDw1_S += (GearColourDw1-GearColourDw1_S)*0.85
+    }
+    if(changed(StopGearScaleDw1)&StopGearScaleDw1) { GearScaleDw1 = 60*Resolution:x()/Resolution:x() GearColourDw1 = -85 }
+    
+    #---------------------------------------------------------------------------------------------
+    
+    if(Gear==1&!StopGearScaleDw2){timer("Stop GearScaleDw2",275)}
+    if(clk("Stop GearScaleDw2")) { StopGearScaleDw2 = 1 }
+    elseif(Gear!=1){ StopGearScaleDw2 = 0 }
+    if(changed(StopGearScaleDw2)&!StopGearScaleDw2&Gear!=1){ GearScaleDw2 = GearColourDw2 = 0 }
+    
+    if(changed(C2)&C2&!StopGearScaleDw2){timer("GSB Dw2",10)}
+    if(clk("GSB Dw2")){GSB_Dw2 = !GSB_Dw2, GearScaleDw2 = 75*Resolution:x()/Resolution:x() GearColourDw2 = 340}
+    if(GSB_Dw2&GearScaleDw2<=0){GSB_Dw2=0}
+    if(GSB_Dw2&GearScaleDw2>0){GearScaleDw2=clamp(GearScaleDw2-22.5,0*Resolution:x()/Resolution:x(),75*Resolution:x()/Resolution:x())}
+    if(GSB_Dw2&GearScaleDw2>0){GearColourDw2=clamp(GearColourDw2-100,0,340)}
+    
+    if(!StopGearScaleDw2){
+        GearScaleDw2_S += (GearScaleDw2-GearScaleDw2_S)*0.85
+        GearColourDw2_S += (GearColourDw2-GearColourDw2_S)*0.85
+    }
+    if(changed(StopGearScaleDw2)&StopGearScaleDw2) { GearScaleDw2 = 75*Resolution:x()/Resolution:x() GearColourDw2 = 340 }
+    #GearDown End
+    
+    return array(GearScaleUp1_S,GearColourUp1_S,GearScaleUp2_S,GearColourUp2_S,GearScaleDw1_S,GearColourDw1_S,GearScaleDw2_S,GearColourDw2_S)
+}
+
+function wirelink:scaler2EGP(GearArray:array,GearScale:array,C1,C2) {
+    if(changed(C1)&C1){ GearUp = 1 GearDw = 0}
+    if(changed(C2)&C2){ GearUp = 0 GearDw = 1}
+    
+    if(GearUp&!GearDw){
+        EGP:egpSetText(GearString1,GearArray[2,string])
+        EGP:egpSetText(GearString2,GearArray[3,string])
+    
+        EGP:egpSize(GearString1,GearScale[1,number]*(1-tickInterval()))
+        EGP:egpColor(GearString1,vec4(255,255,255,GearScale[2,number]*(1-tickInterval())))
+        
+        EGP:egpSize(GearString2,GearScale[3,number]*(1-tickInterval()))
+        EGP:egpColor(GearString2,vec4(255,255,255,GearScale[4,number]*(1-tickInterval())))
+    }elseif(!GearUp&GearDw){
+        EGP:egpSetText(GearString1,GearArray[3,string])
+        EGP:egpSetText(GearString2,GearArray[1,string])
+    
+        EGP:egpSize(GearString1,GearScale[5,number]*(1-tickInterval()))
+        EGP:egpColor(GearString1,vec4(255,255,255,GearScale[6,number]*(1-tickInterval())))
+        
+        EGP:egpSize(GearString2,GearScale[7,number]*(1-tickInterval()))
+        EGP:egpColor(GearString2,vec4(255,255,255,GearScale[8,number]*(1-tickInterval())))
+    }
+}
+
+GearAry = gear2String(Gear,GearboxCondition)
+GearScl = gearScaler(Mouse1,Mouse2,GearboxCondition)
+
+EGP:scaler2EGP(GearAry,GearScl,Mouse1,Mouse2)

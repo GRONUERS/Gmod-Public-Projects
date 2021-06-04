@@ -1,0 +1,66 @@
+@name Adv PodCon Key Plus
+@inputs Adv_PodController:wirelink
+@outputs W A S D Mouse1 Mouse2 Reload Space Shift RControl WheelUp WheelDown FlashLight ThirdPerson 
+@outputs F H J K L M O SemiColon Apostrophe Comma Period Slash
+@outputs Insert Delete Home End PGUP PGDN
+@outputs N1 N2 N3 N4 N5 N6 N7 N8 N9 N0
+@outputs NP_0 NP_1 NP_2 NP_3 NP_4 NP_5 NP_6 NP_7 NP_8 NP_9 Active
+@persist 
+
+interval( 100 )
+Driver = Adv_PodController[ "Driver", entity ]
+runOnKeys( Driver, 1 )
+W = Adv_PodController[ "W", number ]
+A = Adv_PodController[ "A", number ]
+S = Adv_PodController[ "S", number ]
+D = Adv_PodController[ "D", number ]
+Mouse1 = Adv_PodController[ "Mouse1", number ]
+Mouse2 = Adv_PodController[ "Mouse2", number ]
+Reload = Adv_PodController[ "R", number ]
+Space = Adv_PodController[ "Space", number ]
+Shift = Adv_PodController[ "Shift", number ]
+Alt = Adv_PodController[ "Alt", number ]
+FlashLight = Adv_PodController[ "Light", number ]
+ThirdPerson = Adv_PodController[ "ThirdPerson", number ]
+Active = Adv_PodController[ "Active", number ]
+WheelUp = Adv_PodController[ "PrevWeapon", number ]
+WheelDown = Adv_PodController[ "NextWeapon", number ]
+F = Driver:keyPressed( "F" )
+H = Driver:keyPressed( "H" )
+J = Driver:keyPressed( "J" )
+K = Driver:keyPressed( "K" )
+L = Driver:keyPressed( "L" )
+M = Driver:keyPressed( "M" )
+O = Driver:keyPressed( "O" )
+SemiColon = Driver:keyPressed( "SEMICOLON" )
+Apostrophe = Driver:keyPressed( "APOSTROPHE" )
+Comma = Driver:keyPressed( "COMMA" )
+Period = Driver:keyPressed( "PERIOD" )
+Slash = Driver:keyPressed( "SLASH" )
+RControl = Driver:keyPressed( "RControl" )
+NP_0 = Driver:keyPressed( "PAD_0" )
+NP_1 = Driver:keyPressed( "PAD_1" )
+NP_2 = Driver:keyPressed( "PAD_2" )
+NP_3 = Driver:keyPressed( "PAD_3" )
+NP_4 = Driver:keyPressed( "PAD_4" )
+NP_5 = Driver:keyPressed( "PAD_5" )
+NP_6 = Driver:keyPressed( "PAD_6" )
+NP_7 = Driver:keyPressed( "PAD_7" )
+NP_8 = Driver:keyPressed( "PAD_8" )
+NP_9 = Driver:keyPressed( "PAD_9" )
+N1 = Driver:keyPressed( "1" )
+N2 = Driver:keyPressed( "2" )
+N3 = Driver:keyPressed( "3" )
+N4 = Driver:keyPressed( "4" )
+N5 = Driver:keyPressed( "5" )
+N6 = Driver:keyPressed( "6" )
+N7 = Driver:keyPressed( "7" )
+N8 = Driver:keyPressed( "8" )
+N9 = Driver:keyPressed( "9" )
+N0 = Driver:keyPressed( "0" )
+PGUP = Driver:keyPressed( "PageUp" )
+PGDN = Driver:keyPressed( "PageDown" )
+Delete = Driver:keyPressed( "DELETE" )
+Home = Driver:keyPressed( "HOME" )
+End = Driver:keyPressed( "END" )
+Insert = Driver:keyPressed( "INSERT" )
