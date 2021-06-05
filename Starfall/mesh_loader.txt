@@ -1,9 +1,9 @@
---@name Mesh Loader M-F1-2021F
+--@name Mesh Loader
 --@author GRONUERS
---@include Mesh_Default_Settings_MF12021F.txt
+--@include Mesh_Default_Settings.txt
 --@shared 
 
-local Settings = require("Mesh_Default_Settings_MF12021F.txt")
+local Settings = require("Mesh_Default_Settings.txt")
 
 if SERVER then
 
