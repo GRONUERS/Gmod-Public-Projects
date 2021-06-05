@@ -57,7 +57,7 @@ Mesh_Default_Settings.txt의 내용은
 ```lua
 local name = "" --칩의 이름을 정해줍니다.
 local meshdelay = 4 --메쉬 소환 딜레이를 정합니다. (3.5 미만으로는 추천드리지 않습니다.)
-local meshSpeed = 7 --메쉬의 로딩 시간을 정합니다. (높을수록 로딩시간이 길어집니다. 4~500)
+local meshSpeed = 7 --메쉬의 로딩 시간을 정합니다. (높을수록 로딩시간이 길어집니다. 하지만 그만큼 서버의 부하도 줄어듭니다. 100~10000)
 
 ["HudStatus"] = true / false,
 --오른쪽 밑에 렌더링 할 메쉬가 몇개 남았는지를 띄워줍니다. (젤렌서버에선 enableHud가 구문이 없으므로, false로 미리 설정해두시기 바랍니다.)
