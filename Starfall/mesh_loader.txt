@@ -1,9 +1,9 @@
---@name Mesh Loader
+--@name Mesh Loader M-F1-2021F
 --@author GRONUERS
---@include Mesh_Default_Settings.txt
+--@include Mesh_Default_Settings_MF12021F.txt
 --@shared 
 
-local Settings = require("Mesh_Default_Settings.txt")
+local Settings = require("Mesh_Default_Settings_MF12021F.txt")
 
 if SERVER then
 
@@ -16,14 +16,19 @@ elseif CLIENT then
     local timestart = timer.realtime()
     local total = 0
     local lastColor = Color(0,0,0)
-    local lastMaterial = ""
-    local untilIdx = {}
-    local endIdx = {}
+    local lastMaterialD = ""
+    local lastMaterialC = ""
+    local untilIdxC = {}
+    local endIdxC = {}
+    local untilIdxM = {}
+    local endIdxM = {}
     local Holo = { ["Holograms"] = {} }
     local c = 1
     local m = 1
     local color = ""
     local mtl = ""
+    local stay1 = 0
+    local stay2 = 0
     
     local function finished(index, total, meshCount)
         local ctime = timer.realtime()
@@ -71,6 +76,7 @@ elseif CLIENT then
     for i = 1, meshMaxCount do
         timer.simple( meshDelay*(i-1), function()
             color = string.explode(" ",Settings.Color[c])
+            mtl   = Settings.Material[m]
         end)
         
         timer.simple( meshDelay*(i-1), function() 
@@ -114,35 +120,35 @@ elseif CLIENT then
                 end
             end
 
-            if untilIdxC ~= nil and endIdxC[1] ~= nil and i == endIdxC[1] - 1 then
+            if untilIdxC[1] ~= nil and endIdxC[1] ~= nil and i == endIdxC[1] - 1 then
                 c = c + 1
                 table.remove(untilIdxC)
                 table.remove(endIdxC)
             end
 
             if string.explode(" ",mtl)[1] ~= "custom" then 
-                if tonumber(mtl) == nil and stay == 0 then 
+                if tonumber(mtl) == nil and stay1 == 0 then 
                     m = m + 1
-                    lastMaterial = mtl
+                    lastMaterialD = mtl
                     Holo.Holograms[Name]:setMaterial(mtl) 
                 elseif tonumber(mtl) ~= nil then
                     if untilIdxM[1] == nil and endIdxM[1] == nil then
-                        stay = 1
-                        table.insert(untilIdxM,i)
-                        table.insert(endIdxM,untilIdxM[1] + tonumber(mtl))
+                        stay1 = 1
+                        table.insert(untilIdxM,1,i)
+                        table.insert(endIdxM,1,untilIdxM[1] + tonumber(mtl))
                     end
                 end
             end
             
             if untilIdxM[1] ~= nil and endIdxM[1] ~= nil then
                 for j = untilIdxM[1], endIdxM[1] do
-                    if i == j then Holo.Holograms[Name]:setMaterial(lastMaterial) end
+                    if i == j then Holo.Holograms[Name]:setMaterial(lastMaterialD) end
                 end
             end
             
-            if untilIdxM ~= nil and endIdxM[1] ~= nil and i == endIdxM[1] - 1 and stay == 1 then
+            if untilIdxM[1] ~= nil and endIdxM[1] ~= nil and i == endIdxM[1] - 1 and stay1 == 1 then
                 m = m + 1
-                stay = 0
+                stay1 = 0
                 table.remove(untilIdxM,1)
                 table.remove(endIdxM,1)
             end
@@ -152,40 +158,43 @@ elseif CLIENT then
     
                 local function doneLoadingMesh()
                     print("Used "..(triangles - mesh.trianglesLeft()).." triangles to load "..Name)
-                    if string.explode(" ",mtl)[1] == "custom" then
-                        if tonumber(mtl) == nil and stay == 0 then 
+                    if tonumber(mtl) == nil and stay2 == 0 then 
+                        if string.explode(" ",mtl)[1] == "custom" then
                             m = m + 1
-                            local CMS = string.explode(" ",Settings.Material[i])[2]
+                            local CMS = string.explode(" ",mtl)[2]
                             local CMS = string.replace(CMS,"www","dl")
                             local CMS = string.replace(CMS,"?dl=0","")
                             
-                            local customMaterial = material.create("VertexLitGeneric")
-                            customMaterial:setTextureURL("$basetexture",CMS)
-                            lastMaterial = customMaterial
+                            local customMaterial1 = material.create("VertexLitGeneric")
+                            customMaterial1:setTextureURL("$basetexture",CMS)
+                            lastMaterialC = CMS
                             
-                            Holo.Holograms[Name]:setMeshMaterial(customMaterial) 
-                        elseif tonumber(mtl) ~= nil then
-                            if untilIdxM[2] == nil and endIdxM[2] == nil then
-                                stay = 1
-                                table.insert(untilIdxM[2],i)
-                                table.insert(endIdxM[2],untilIdxM[2] + tonumber(mtl))
-                            end
+                            Holo.Holograms[Name]:setMeshMaterial(customMaterial1) 
+                        end
+                    elseif tonumber(mtl) ~= nil then
+                        if untilIdxM[2] == nil and endIdxM[2] == nil then
+                            stay2 = 1
+                            table.insert(untilIdxM,2,i)
+                            table.insert(endIdxM,2,untilIdxM[2] + tonumber(mtl))
                         end
                     end
                     
                     if untilIdxM[2] ~= nil and endIdxM[2] ~= nil then
+                        local customMaterial2 = material.create("VertexLitGeneric")
+                        customMaterial2:setTextureURL("$basetexture",lastMaterialC)
+                           
                         for j = untilIdxM[2], endIdxM[2] do
-                            if i == j then Holo.Holograms[Name]:setMeshMaterial(lastMaterial)  end
+                            if i == j then Holo.Holograms[Name]:setMeshMaterial(customMaterial2) end
                         end
                     end
                         
-                    if untilIdxM ~= nil and endIdxM[2] ~= nil and i == endIdxM[2] - 1 and stay == 1 then
+                    if untilIdxM[2] ~= nil and endIdxM[2] ~= nil and i == endIdxM[2] - 1 and stay2 == 1 then
                         m = m + 1
-                        stay = 0
+                        stay2 = 0
                         table.remove(untilIdxM,2)
                         table.remove(endIdxM,2)
                     end
-            
+
                     Holo.Holograms[Name]:setMesh(mymesh)
                     Holo.Holograms[Name]:setScale(Vector(Scale))
                     Holo.Holograms[Name]:setRenderBounds(Vector(-200),Vector(200))
