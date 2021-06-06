@@ -16,19 +16,17 @@ elseif CLIENT then
     local timestart = timer.realtime()
     local total = 0
     local lastColor = Color(0,0,0)
-    local lastMaterialD = ""
-    local lastMaterialC = ""
-    local untilIdxC = {}
-    local endIdxC = {}
-    local untilIdxM = {}
-    local endIdxM = {}
+    local lastMaterial = {[1] = "",[2] = nil}
+    local startIdx = {["Color"] = {}, ["Material"] = {}}
+    local endIdx   = {["Color"] = {}, ["Material"] = {}}
+    local stayIdx  = {["StayC"] = 0, ["StayM"] = 0}
     local Holo = { ["Holograms"] = {} }
     local c = 1
     local m = 1
     local color = ""
-    local mtl = ""
-    local stay1 = 0
-    local stay2 = 0
+    local mtl   = ""
+    local _mtl  = ""
+    local customMaterial = material.create("VertexLitGeneric")
     
     local function finished(index, total, meshCount)
         local ctime = timer.realtime()
@@ -74,12 +72,12 @@ elseif CLIENT then
     }
     
     for i = 1, meshMaxCount do
-        timer.simple( meshDelay*(i-1), function()
-            color = string.explode(" ",Settings.Color[c])
-            mtl   = Settings.Material[m]
-        end)
         
         timer.simple( meshDelay*(i-1), function() 
+            color = string.explode(" ",Settings.Color[c])
+            mtl   = string.explode(" ",Settings.Material[m])
+            if m > 1 then _mtl  = string.explode(" ",Settings.Material[m-1]) end
+            
             local URL = Settings.URL[i]
             local URL = string.replace(URL,"www","dl")
             local URL = string.replace(URL,"?dl=0","")
@@ -101,100 +99,68 @@ elseif CLIENT then
                 Holo.Holograms[Name]:setParent(chip())
             end
             
-            if (#color >= 3) == true then 
+            -- Color Repeat
+            if color[2] ~= nil and stayIdx.StayC == 0 then
                 c = c + 1
                 lastColor = Color(tonumber(color[1]),tonumber(color[2]),tonumber(color[3]),tonumber(color[4]))
-                Holo.Holograms[Name]:setColor(Color(tonumber(color[1]),tonumber(color[2]),tonumber(color[3]),tonumber(color[4]))) 
+                Holo.Holograms[Name]:setColor(Color(tonumber(color[1]),tonumber(color[2]),tonumber(color[3]),tonumber(color[4])))
+            elseif color[2] == nil and startIdx.Color[1] == nil and endIdx.Color[1] == nil and stayIdx.StayC == 0 then
+                stayIdx.StayC = 1
+                table.insert(startIdx.Color, i)
+                table.insert(endIdx.Color, startIdx.Color[1] + tonumber(color[1]))
             end
             
-            if (#color >= 3) == false then
-                if untilIdxC[1] == nil and endIdxC[1] == nil then
-                    table.insert(untilIdxC,i)
-                    table.insert(endIdxC,untilIdxC[1] + tonumber(color[1]))
-                end
+            if startIdx.Color[1] ~= nil and endIdx.Color[1] ~= nil then
+                if i < endIdx.Color[1] and i >= startIdx.Color[1] then Holo.Holograms[Name]:setColor(lastColor) end
             end
             
-            if untilIdxC[1] ~= nil and endIdxC[1] ~= nil then
-                for j = untilIdxC[1], endIdxC[1] do
-                    if i == j then Holo.Holograms[Name]:setColor(lastColor) end
-                end
-            end
-
-            if untilIdxC[1] ~= nil and endIdxC[1] ~= nil and i == endIdxC[1] - 1 then
+            if startIdx.Color[1] ~= nil and endIdx.Color[1] ~= nil and i == endIdx.Color[1] - 1 then
                 c = c + 1
-                table.remove(untilIdxC)
-                table.remove(endIdxC)
-            end
-
-            if string.explode(" ",mtl)[1] ~= "custom" then 
-                if tonumber(mtl) == nil and stay1 == 0 then 
-                    m = m + 1
-                    lastMaterialD = mtl
-                    Holo.Holograms[Name]:setMaterial(mtl) 
-                elseif tonumber(mtl) ~= nil then
-                    if untilIdxM[1] == nil and endIdxM[1] == nil then
-                        stay1 = 1
-                        table.insert(untilIdxM,1,i)
-                        table.insert(endIdxM,1,untilIdxM[1] + tonumber(mtl))
-                    end
-                end
+                stayIdx.StayC = 0
+                table.remove(startIdx.Color)
+                table.remove(endIdx.Color)
             end
             
-            if untilIdxM[1] ~= nil and endIdxM[1] ~= nil then
-                for j = untilIdxM[1], endIdxM[1] do
-                    if i == j then Holo.Holograms[Name]:setMaterial(lastMaterialD) end
-                end
-            end
-            
-            if untilIdxM[1] ~= nil and endIdxM[1] ~= nil and i == endIdxM[1] - 1 and stay1 == 1 then
+            -- Material Repeat
+            if tonumber(mtl[1]) == nil and stayIdx.StayM == 0 then
                 m = m + 1
-                stay1 = 0
-                table.remove(untilIdxM,1)
-                table.remove(endIdxM,1)
+                if mtl[1] ~= "custom" then
+                    lastMaterial[1] = mtl[1]
+                    Holo.Holograms[Name]:setMaterial(mtl[1]) 
+                elseif mtl[1] == "custom" then
+                    local CMS = string.replace(mtl[2],"www","dl")
+                    local CMS = string.replace(CMS,"?dl=0","")
+
+                    customMaterial:setTextureURL("$basetexture",CMS)
+                    lastMaterial[2] = customMaterial
+                    Holo.Holograms[Name]:setMeshMaterial(customMaterial)
+                end
+            elseif tonumber(mtl[1]) ~= nil and startIdx.Material[1] == nil and endIdx.Material[1] == nil then
+                stayIdx.StayM = 1
+                table.insert(startIdx.Material, i)
+                table.insert(endIdx.Material, startIdx.Material[1] + tonumber(mtl[1]))
             end
             
-            http.get( URL,function(objdata)
+            if startIdx.Material[1] ~= nil and endIdx.Material[1] ~= nil then
+                if _mtl[1] ~= "custom" and i < endIdx.Material[1] and i >= startIdx.Material[1] then 
+                    Holo.Holograms[Name]:setMaterial(lastMaterial[1]) 
+                elseif _mtl[1] == "custom" and i < endIdx.Material[1] and i >= startIdx.Material[1] then
+                    Holo.Holograms[Name]:setMeshMaterial(lastMaterial[2])
+                end
+                
+                if i == endIdx.Material[1] - 1 then
+                    m = m + 1
+                    stayIdx.StayM = 0
+                    table.remove(startIdx.Material)
+                    table.remove(endIdx.Material)
+                end
+            end
+            
+            http.get( URL, function(objdata)
                 local triangles = mesh.trianglesLeft()
     
                 local function doneLoadingMesh()
                     print("Used "..(triangles - mesh.trianglesLeft()).." triangles to load "..Name)
-                    if tonumber(mtl) == nil and stay2 == 0 then 
-                        if string.explode(" ",mtl)[1] == "custom" then
-                            m = m + 1
-                            local CMS = string.explode(" ",mtl)[2]
-                            local CMS = string.replace(CMS,"www","dl")
-                            local CMS = string.replace(CMS,"?dl=0","")
-                            
-                            local customMaterial1 = material.create("VertexLitGeneric")
-                            customMaterial1:setTextureURL("$basetexture",CMS)
-                            lastMaterialC = CMS
-                            
-                            Holo.Holograms[Name]:setMeshMaterial(customMaterial1) 
-                        end
-                    elseif tonumber(mtl) ~= nil then
-                        if untilIdxM[2] == nil and endIdxM[2] == nil then
-                            stay2 = 1
-                            table.insert(untilIdxM,2,i)
-                            table.insert(endIdxM,2,untilIdxM[2] + tonumber(mtl))
-                        end
-                    end
-                    
-                    if untilIdxM[2] ~= nil and endIdxM[2] ~= nil then
-                        local customMaterial2 = material.create("VertexLitGeneric")
-                        customMaterial2:setTextureURL("$basetexture",lastMaterialC)
-                           
-                        for j = untilIdxM[2], endIdxM[2] do
-                            if i == j then Holo.Holograms[Name]:setMeshMaterial(customMaterial2) end
-                        end
-                    end
-                        
-                    if untilIdxM[2] ~= nil and endIdxM[2] ~= nil and i == endIdxM[2] - 1 and stay2 == 1 then
-                        m = m + 1
-                        stay2 = 0
-                        table.remove(untilIdxM,2)
-                        table.remove(endIdxM,2)
-                    end
-
                     Holo.Holograms[Name]:setMesh(mymesh)
                     Holo.Holograms[Name]:setScale(Vector(Scale))
                     Holo.Holograms[Name]:setRenderBounds(Vector(-200),Vector(200))
@@ -206,7 +172,7 @@ elseif CLIENT then
     
                 local loadmesh = coroutine.wrap(function() mymesh = mesh.createFromObj(objdata, true, true).Draw return true end)
                 hook.add("think","loadingMesh",function()
-                    while quotaAverage()<quotaMax()/(math.clamp(Settings.Speed,4,500)) do
+                    while quotaAverage()<quotaMax()/(math.clamp(Settings.Speed,1000,50000)) do
                         if loadmesh() then
                             doneLoadingMesh()
                             hook.remove("think","loadingMesh")
@@ -226,4 +192,3 @@ elseif CLIENT then
     hook.add("think","",function()
 
     end)
-end
