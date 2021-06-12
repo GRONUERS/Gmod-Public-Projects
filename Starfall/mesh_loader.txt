@@ -192,3 +192,5 @@ elseif CLIENT then
     hook.add("think","",function()
 
     end)
+
+end
